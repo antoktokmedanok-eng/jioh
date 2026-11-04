@@ -50,20 +50,23 @@ export async function onRequest(context) {
 
   headers.set("Accept", "*/*")
   headers.set("Accept-Encoding", "gzip, deflate, br, zstd")
-  headers.set("Accept-Language", "en-US,en;q=0.9")
+  headers.set("Accept-Language", "id,en;q=0.9,en-US;q=0.8")
+  headers.set("Cache-Control", "no-cache")
   headers.set("Origin", "https://giotv-6op.pages.dev")
+  headers.set("Pragma", "no-cache")
+  headers.set("Priority", "u=1, i")
   headers.set("Referer", "https://giotv-6op.pages.dev/")
   headers.set("Connection", "keep-alive")
   headers.set("Sec-Fetch-Dest", "empty")
   headers.set("Sec-Fetch-Mode", "cors")
   headers.set("Sec-Fetch-Site", "cross-site")
-  headers.set("sec-ch-ua", `"Google Chrome";v="147", "Not.A/Brand";v="8", "Chromium";v="147"`)
+  headers.set("sec-ch-ua", `"Not:A-Brand";v="8", "Chromium";v="156", "Microsoft Edge";v="156"`)
   headers.set("sec-ch-ua-mobile", "?0")
   headers.set("sec-ch-ua-platform", `"Windows"`)
 
   headers.set(
     "User-Agent",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/147.0.0.0 Safari/537.36"
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36 Edg/156.0.0.0"
   )
 
   if (globalToken) headers.set("Cookie", globalToken)
