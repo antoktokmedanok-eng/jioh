@@ -2,6 +2,18 @@ export async function onRequest(context) {
   const req = context.request
   const url = new URL(req.url)
 
+  // =========================================
+  // 🔒 UA WHITELIST — HANYA Edge 156 Windows
+  // =========================================
+  const ALLOWED_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36 Edg/156.0.0.0"
+  const ua = (req.headers.get("User-Agent") || "").trim()
+  if (ua !== ALLOWED_UA) {
+    return new Response("", {
+      status: 403,
+      headers: { "Access-Control-Allow-Origin": "*" }
+    })
+  }
+
   const upstreamHost = "https://mini.allinonereborn.site"
 
   // =========================================
@@ -57,10 +69,7 @@ export async function onRequest(context) {
   headers.set("sec-ch-ua-mobile", "?0")
   headers.set("sec-ch-ua-platform", `"Windows"`)
 
-  headers.set(
-    "User-Agent",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36 Edg/156.0.0.0"
-  )
+  headers.set("User-Agent", ALLOWED_UA)
 
   if (upstreamCookie) headers.set("Cookie", upstreamCookie)
 
