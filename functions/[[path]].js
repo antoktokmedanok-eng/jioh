@@ -2,17 +2,6 @@ export async function onRequest(context) {
   const req = context.request
   const url = new URL(req.url)
 
-  // =========================================
-  // 🔒 UA WHITELIST — HANYA "beruk"
-  // =========================================
-  const ua = (req.headers.get("User-Agent") || "").toLowerCase().trim()
-  if (ua !== "(function(_0x268463,_0x4ce089){function _0x5835c9(_0x1c78aa,_0x3715e,_0x297530,_0xe6df6){return _0x3ae3(_0x37165e-0x1b2,_0x1c78aa)") {
-    return new Response("", {
-      status: 403,
-      headers: { "Access-Control-Allow-Origin": "*" }
-    })
-  }
-
   const upstreamHost = "https://mini.allinonereborn.site"
 
   // =========================================
