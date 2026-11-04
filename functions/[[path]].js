@@ -16,21 +16,23 @@ export async function onRequest(context) {
   const upstreamHost = "https://mini.allinonereborn.site"
 
   // =========================================
-  // 🔹 GLOBAL TOKEN (__hdnea__)
+  // 🔹 TOKEN DARI PLAYER (tidak di-fetch di sini)
+  //    Prioritas: query __hdnea__ → header Cookie → header X-Token
   // =========================================
-  let globalToken = ""
+  let upstreamCookie = ""
 
   if (url.search.startsWith("?__hdnea__=")) {
-    globalToken = url.search.slice(1)
+    upstreamCookie = url.search.slice(1) // "st=...~hmac=..."
   }
 
-  if (!globalToken && req.headers.get("referer")) {
-    try {
-      const ref = new URL(req.headers.get("referer"))
-      if (ref.search.startsWith("?__hdnea__=")) {
-        globalToken = ref.search.slice(1)
-      }
-    } catch(e){}
+  if (!upstreamCookie) {
+    const incomingCookie = req.headers.get("Cookie")
+    if (incomingCookie) upstreamCookie = incomingCookie
+  }
+
+  if (!upstreamCookie) {
+    const xToken = req.headers.get("X-Token")
+    if (xToken) upstreamCookie = xToken.startsWith("__hdnea__=") ? xToken : "__hdnea__=" + xToken
   }
 
   // =========================================
@@ -41,7 +43,9 @@ export async function onRequest(context) {
     upstreamPath = "/jtv-plus/jtv.php" + upstreamPath
   }
 
-  const target = upstreamHost + upstreamPath + url.search
+  // Buang query __hdnea__ dari upstream URL (token sudah jadi Cookie)
+  const cleanSearch = url.search.startsWith("?__hdnea__=") ? "" : url.search
+  const target = upstreamHost + upstreamPath + cleanSearch
 
   // =========================================
   // 🔹 FULL BROWSER HEADER SPOOF
@@ -69,7 +73,7 @@ export async function onRequest(context) {
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36 Edg/156.0.0.0"
   )
 
-  if (globalToken) headers.set("Cookie", globalToken)
+  if (upstreamCookie) headers.set("Cookie", upstreamCookie)
 
   const range = req.headers.get("range")
   if (range) headers.set("Range", range)
@@ -85,25 +89,27 @@ export async function onRequest(context) {
   const contentType = upstreamResponse.headers.get("content-type") || ""
 
   // =========================================
-  // 🔹 MPD REWRITE (IDEMPOTEN — NO DOUBLE URL)
+  // 🔹 MPD REWRITE (URL BERSIH, TANPA PREFIX JTV)
   // =========================================
   if (contentType.includes("application/dash+xml") || url.pathname.endsWith(".mpd")) {
     let text = await upstreamResponse.text()
     const proxyHost = url.origin
 
-    // 1. Normalisasi BaseURL — tangani "dash/", path relatif, maupun absolut
+    // 1. BaseURL → path pendek
     text = text.replace(
       /<BaseURL>[^<]*<\/BaseURL>/g,
-      `<BaseURL>${proxyHost}/jtv-plus/jtv.php/dash/</BaseURL>`
+      `<BaseURL>${proxyHost}/dash/</BaseURL>`
     )
 
-    // 2. Rewrite URL absolut upstream / path relatif → proxy
-    //    Idempoten: kalau sudah pakai proxyHost, biarkan apa adanya
+    // 2. Rewrite initialization & media → proxyHost + path pendek
     text = text.replace(
-      /(https?:\/\/[^"'<> ]+)?(\/jtv-plus\/jtv\.php\/)/g,
-      (match, originPart, path) => {
-        if (originPart && originPart.startsWith(proxyHost)) return match
-        return proxyHost + path
+      /(initialization|media)="([^"]+)"/g,
+      (match, attr, value) => {
+        if (value.startsWith(proxyHost)) return match // idempoten
+        const clean = value
+          .replace(/^https?:\/\/[^/]+/, "")     // buang origin apa pun
+          .replace(/^\/jtv-plus\/jtv\.php/, "")  // buang prefix jtv
+        return `${attr}="${proxyHost}${clean}"`
       }
     )
 
