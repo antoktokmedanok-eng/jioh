@@ -85,20 +85,26 @@ export async function onRequest(context) {
   const contentType = upstreamResponse.headers.get("content-type") || ""
 
   // =========================================
-  // 🔹 MPD REWRITE
+  // 🔹 MPD REWRITE (IDEMPOTEN — NO DOUBLE URL)
   // =========================================
   if (contentType.includes("application/dash+xml") || url.pathname.endsWith(".mpd")) {
     let text = await upstreamResponse.text()
     const proxyHost = url.origin
 
+    // 1. Normalisasi BaseURL — tangani "dash/", path relatif, maupun absolut
     text = text.replace(
-      "<BaseURL>dash/</BaseURL>",
+      /<BaseURL>[^<]*<\/BaseURL>/g,
       `<BaseURL>${proxyHost}/jtv-plus/jtv.php/dash/</BaseURL>`
     )
 
-    text = text.replaceAll(
-      "/jtv-plus/jtv.php/",
-      proxyHost + "/jtv-plus/jtv.php/"
+    // 2. Rewrite URL absolut upstream / path relatif → proxy
+    //    Idempoten: kalau sudah pakai proxyHost, biarkan apa adanya
+    text = text.replace(
+      /(https?:\/\/[^"'<> ]+)?(\/jtv-plus\/jtv\.php\/)/g,
+      (match, originPart, path) => {
+        if (originPart && originPart.startsWith(proxyHost)) return match
+        return proxyHost + path
+      }
     )
 
     return new Response(text, {
